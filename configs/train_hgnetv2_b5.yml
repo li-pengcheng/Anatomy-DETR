@@ -1,0 +1,8 @@
+__include__:
+  - ./dataset/custom_detection.yml
+  - ./dataloader/hgnetv2b5_detection_loader.yml
+  - ./model/hgnetv2_b5_stride832.yml
+  - ./optim/hgnetv2_adamw_flatcosine.yml
+  - ./runtime/train_runtime.yml
+
+output_dir: output/hgnetv2_b5_stride832

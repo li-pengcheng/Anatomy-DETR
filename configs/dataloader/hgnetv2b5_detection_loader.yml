@@ -1,0 +1,87 @@
+train_dataloader:
+  shuffle: True
+  total_batch_size: 30
+  num_workers: 6
+  pin_memory: True
+  drop_last: True
+
+  dataset:
+    transforms:
+      type: Compose
+      ops:
+      # Mosaic 增强: 会把 4 张图拼成一张图。rotation_range表示旋转角度。translation_range表示水平和垂直方向最多平移图像尺寸的多少。scaling_range缩放范围。probability执行概率。fill_value表示平移后用什么像素值填充。
+        - {type: Mosaic, output_size: [672, 1344], rotation_range: 0, translation_range: [0.05, 0.05], scaling_range: [0.7, 1.3], probability: 1.0, fill_value: 0, use_cache: True, max_cached_images: 500, random_pop: True}
+      # 随机扰动亮度、对比度、饱和度、色调。brightness亮度因子。contrast对比度因子。saturation饱和度范围。hue色调范围。p标志执行概率。
+        - {type: RandomPhotometricDistort, brightness: [0.90, 1.10], contrast: [0.90, 1.10], saturation: [0.90, 1.10], hue: [-0.02, 0.02], p: 0.3}
+      # 把原图缩小后放到更大的画布里，相当于让目标变小、增加上下文。fill表示扩展画布时空白区域填充像素值。side_range表示扩展画布边长范围。p执行概率。
+        - {type: RandomZoomOut, fill: 0, side_range: [1.0, 1.2], p: 0.15}
+      # 清理无效标注框，例如裁剪后宽高太小的框、越界框、异常框。
+        - {type: SanitizeBoundingBoxesGT, min_size: 1}
+        - {type: SanitizeToothBoxes, min_size: 1}
+      # 水平翻转
+        - {type: RandomHorizontalFlip, p: 0.3}
+      # 表示把图像 resize 到固定尺寸
+        - {type: Resize, size: [672, 1344]}
+        - {type: SanitizeToothBoxes, min_size: 1}
+      # 根据mask修正box为rotate box，更贴合牙齿，注意这一步必须在所有数据变换结束后进行
+        - {type: BuildToothRBoxesFromCorners, drop_corners: True, upper_tooth_types: [0, 2, 4], lower_tooth_types: [1, 3, 5]}
+      # 把 PIL 图像转成 tensor。dtype表示数据类型。scale表示是否把像素缩放到 [0, 1] 范围。
+        - {type: ConvertPILImage, dtype: float32, scale: True}
+      # 把 bounding box 转成模型需要的格式。fmt表示 bounding box 格式。normalize表示是否把 bounding box 归一化到 [0, 1] 范围。
+        - {type: ConvertBoxes, fmt: cxcywh, normalize: True}
+
+      policy:
+        name: stop_epoch
+      # epoch1之前跳过ops中的增强，epoch1到epoch2时按概率启用增强。epoch2到epoch3会启用mosaic之外的增强。epoch3之后关闭全部ops中的增强。
+        epoch: [3, 30, 42]
+      # 表示哪些增强收policy控制，当前设置表示40轮以后这些增强全部停止
+        ops: ['Mosaic', 'RandomPhotometricDistort', 'RandomZoomOut', 'RandomHorizontalFlip']
+      # 控制mosaic增强的执行概率
+      mosaic_prob: 0.2
+
+  collate_fn:
+    type: BatchImageCollateFunction
+    base_size: [672, 1344]
+    base_size_repeat: 6
+    mixup_prob: 0.1
+    mixup_epochs: [3, 30]
+    stop_epoch: 42
+    ema_restart_decay: 0.9998
+
+train_stat_dataloader:
+  shuffle: False
+  total_batch_size: 30
+  num_workers: 6
+  drop_last: False
+
+  dataset:
+    transforms:
+      type: Compose
+      ops:
+        - {type: Resize, size: [672, 1344]}
+        - {type: SanitizeToothBoxes, min_size: 1}
+        - {type: BuildToothRBoxesFromCorners, drop_corners: True, upper_tooth_types: [0, 2, 4], lower_tooth_types: [1, 3, 5]}
+        - {type: ConvertPILImage, dtype: float32, scale: True}
+        - {type: ConvertBoxes, fmt: cxcywh, normalize: True}
+
+  collate_fn:
+    type: BatchImageCollateFunction
+
+val_dataloader:
+  shuffle: False
+  total_batch_size: 30
+  num_workers: 6
+  drop_last: False
+
+  dataset:
+    transforms:
+      type: Compose
+      ops:
+        - {type: Resize, size: [672, 1344]}
+        - {type: SanitizeToothBoxes, min_size: 1}
+        - {type: BuildToothRBoxesFromCorners, drop_corners: True, upper_tooth_types: [0, 2, 4], lower_tooth_types: [1, 3, 5]}
+        - {type: ConvertPILImage, dtype: float32, scale: True}
+        - {type: ConvertBoxes, fmt: cxcywh, normalize: True}
+
+  collate_fn:
+    type: BatchImageCollateFunction

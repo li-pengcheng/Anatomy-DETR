@@ -1,0 +1,30 @@
+# Project-level minimal dependencies for Anatomy-DETR
+#
+# Install PyTorch / torchvision according to your CUDA version first, for example:
+#   conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+# or use the official PyTorch command matching your driver/CUDA environment.
+
+torch
+torchvision
+numpy
+opencv-python
+Pillow
+PyYAML
+pycocotools
+faster-coco-eval
+tqdm
+scipy
+pandas
+matplotlib
+timm
+safetensors
+calflops
+
+# Optional: only needed for export/profiling/extra visualization tools
+# onnx
+# onnxruntime
+# onnxsim
+# thop
+# tabulate
+# seaborn
+# einops

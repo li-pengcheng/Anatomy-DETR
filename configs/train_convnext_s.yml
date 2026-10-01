@@ -1,0 +1,8 @@
+__include__:
+  - ./dataset/custom_detection.yml
+  - ./dataloader/convnext_detection_loader.yml
+  - ./model/convnextv2_t_stride832.yml
+  - ./optim/convnext_adamw_flatcosine.yml
+  - ./runtime/train_runtime.yml
+
+output_dir: output/convnext_s_stride832

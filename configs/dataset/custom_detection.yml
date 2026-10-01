@@ -1,0 +1,67 @@
+task: detection
+
+evaluator:
+  type: CocoEvaluator
+  iou_types: ['bbox']
+
+num_classes: 1
+remap_mscoco_category: False
+
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: /path/to/dataset/images/train
+    ann_file: /path/to/dataset/annotations/instances_train.json
+    return_masks: False
+    # Fill with the train split tooth-detector prediction COCO JSON.
+    tooth_json_file: /path/to/dataset/6cls_prompt/6cls_box_mask_train.json
+    tooth_score_thr: 0.1
+    max_tooth_boxes: null
+    tooth_num_types: 6
+    tooth_category_offset: 0
+    validate_category_ids: True
+    # #2 corner-based rbox: PCA once at load in original square pixels, corners follow
+    # augmentation, rbox refit at the end (faster + true anatomical angle). 'masks' = legacy.
+    tooth_rbox_source: corners
+    upper_tooth_types: [0, 2, 4]
+    lower_tooth_types: [1, 3, 5]
+
+train_stat_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: /path/to/dataset/images/train
+    ann_file: /path/to/dataset/annotations/instances_train.json
+    return_masks: False
+    tooth_json_file: /path/to/dataset/6cls_prompt/6cls_box_mask_train.json
+    tooth_score_thr: 0.1
+    max_tooth_boxes: null
+    tooth_num_types: 6
+    tooth_category_offset: 0
+    validate_category_ids: True
+    # #2 corner-based rbox: PCA once at load in original square pixels, corners follow
+    # augmentation, rbox refit at the end (faster + true anatomical angle). 'masks' = legacy.
+    tooth_rbox_source: corners
+    upper_tooth_types: [0, 2, 4]
+    lower_tooth_types: [1, 3, 5]
+
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDetection
+    img_folder: /path/to/dataset/images/val
+    ann_file: /path/to/dataset/annotations/instances_val.json
+    return_masks: False
+    # Fill with the val split tooth-detector prediction COCO JSON.
+    tooth_json_file: /path/to/dataset/6cls_prompt/6cls_box_mask_val.json
+    tooth_score_thr: 0.1
+    max_tooth_boxes: null
+    tooth_num_types: 6
+    tooth_category_offset: 0
+    validate_category_ids: True
+    # #2 corner-based rbox: PCA once at load in original square pixels, corners follow
+    # augmentation, rbox refit at the end (faster + true anatomical angle). 'masks' = legacy.
+    tooth_rbox_source: corners
+    upper_tooth_types: [0, 2, 4]
+    lower_tooth_types: [1, 3, 5]

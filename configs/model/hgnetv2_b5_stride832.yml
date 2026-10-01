@@ -1,0 +1,124 @@
+task: detection
+
+model: AnatomyDETR
+criterion: AnatomyDETRCriterion
+postprocessor: PostProcessor
+
+use_focal_loss: True
+eval_spatial_size: [672, 1344]
+
+AnatomyDETR:
+  backbone: HGNetv2
+  encoder: HybridEncoder
+  decoder: DFINETransformer
+
+HGNetv2:
+  name: B5
+  pretrained: True
+  return_idx: [1, 2, 3]
+  freeze_stem_only: True
+  freeze_at: -1
+  freeze_norm: False
+  local_model_dir: weight/hgnetv2/
+
+HybridEncoder:
+  in_channels: [512, 1024, 2048]
+  feat_strides: [8, 16, 32]
+
+  hidden_dim: 384
+  use_encoder_idx: [2]
+  num_encoder_layers: 1
+  nhead: 8
+  dim_feedforward: 2048
+  dropout: 0.
+  enc_act: gelu
+
+  expansion: 1.0
+  depth_mult: 1
+  act: silu
+
+DFINETransformer:
+  feat_channels: [384, 384, 384]
+  feat_strides: [8, 16, 32]
+  hidden_dim: 256
+  num_levels: 3
+  num_layers: 6
+  eval_idx: -1
+  num_queries: 500
+  num_denoising: 50
+  label_noise_ratio: 0.0
+  box_noise_scale: 1.0
+
+  reg_max: 32
+  reg_scale: 8
+  layer_scale: 1
+  num_points: [3, 6, 3]
+  cross_attn_method: default
+  query_select_method: risk_group
+  risk_query_cfg:
+    enabled: True
+    num_tooth_queries: 200
+    num_risk_queries: 150
+    num_context_queries: 50
+    num_global_queries: 100
+    risk_template_size: 16
+    num_tooth_types: 6
+    upper_tooth_types: [0, 2, 4]
+    lower_tooth_types: [1, 3, 5]
+    tooth_expanded_box_ratio: 1.1
+    context_side_expand: 0.05
+    use_tooth_rotated_box: True
+    min_tooth_queries_per_tooth: 2
+    tooth_extra_eps: 0.05
+    tooth_extra_gamma: 1.0
+    risk_gaussian_sigma_min: 1.0
+    risk_gaussian_sigma_scale: 0.5
+    tooth_rbox_quantile_low: 0.05
+    tooth_rbox_quantile_high: 0.95
+    tooth_rbox_expand_ratio: 1.05
+    tooth_rbox_min_points: 12
+    tooth_rbox_max_points: 512
+    tooth_rbox_bbox_clip_margin: 0.02
+    use_score_only_encoder_adapter: False
+    # --- learnable-prior / hard-miss hyper-parameters (synced across both retained backbones) ---
+    decoder_prior_bias_strength: 0.3       # max scale of decoder attention prior bias after warmup (0 disables decoder bias only)
+    decoder_prior_bias_num_heads: 2         # number of attention heads that receive prior guidance; remaining heads stay image-only
+    decoder_prior_bias_gate_init: 0.7       # sigmoid gate value for each prior-guided head
+    decoder_prior_bias_gate_learnable: False # keep the head split fixed for clean ablation; set True to learn gate values
+    decoder_prior_bias_clip: 0.7            # clamp positive prior logits before adding them to attention logits
+    decoder_prior_bias_max_layers: 2        # use decoder prior attention bias only in the first N decoder layers
+    prior_bias_warmup_epochs: 12      # #5 ramp prior-bias gates 0->full over N epochs (0 disables)
+    hard_miss_confidence_k: 10.0      # #6 Wilson-style confidence smoothing for hard-miss ratio
+    hard_miss_ema_momentum: 0.9       # #6 EMA momentum for the epoch-level hard-miss map
+    hard_miss_loss_beta: 0.5          # #6 positive-loss up-weight in [1,1+beta] on missed regions (0 disables)
+    sampling_pos_max_layers: 2        # #7a run finite-difference sampling-position nudge only in early prior-enabled layers
+
+  activation: silu
+  mlp_act: silu
+
+PostProcessor:
+  num_top_queries: 500
+
+AnatomyDETRCriterion:
+  weight_dict:
+    loss_mal: 1
+    loss_bbox: 5
+    loss_giou: 2
+    loss_fgl: 0.15
+    loss_ddf: 1.5
+    loss_risk_template: 1.0
+    loss_risk_score_prior: 0.2
+    loss_risk_reg: 0.1          # #11 L2 anchor for semi-learnable risk-map residuals
+
+  losses: ['mal', 'boxes', 'local']
+  gamma: 1.5
+  reg_max: 32
+
+  matcher:
+    type: HungarianMatcher
+    weight_dict:
+      cost_class: 2
+      cost_bbox: 5
+      cost_giou: 2
+    alpha: 0.25
+    gamma: 2.0
